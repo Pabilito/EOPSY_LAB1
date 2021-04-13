@@ -1,0 +1,163 @@
+#!/bin/bash 
+
+#TO AVOID USING ./ (./modify_examples) to call script
+#before first execution please make an alias (copy to the console)
+#alias modify_examples='path_to_where_this_file_is_saved'
+#alias modify_examples='/home/pabilito/Lab1/modify_examples' in my case
+#chmod u+x modify_examples if permision denied
+
+#To make this both scripts more reasonable for general use, I should make 
+#an assumption that we always add those bash scripts to a folder belonging to PATH
+#and that it is always the same - for example some of bin folders
+#Comment for me - $PATH to get list of PATH folders
+
+path="/home/pabilito/Lab1/modify"
+r="-r"
+u="-u"
+l="-l"
+h="-h"
+fpath="/home/pabilito/Lab1/eopsy"
+fpath2="/home/pabilito/Lab1/EOPSY"
+
+file_structure(){ #files are set to this pattern at the beginning of the execution of the script
+	echo "##############################################"
+	echo "Welocome to testing device!"
+	echo "File structure:"
+	echo " "
+	echo "EOPSY->PLAYGROUND->FOLDER1->MUSIC.mp3"
+	echo "	\	  \          \---->NOTMUSIC"
+	echo "	 \         \------------->VIRUS.exe"
+	echo "	  \         \------------->FOLDER1"
+	echo "	   \->TEST			\->MUSIC.mp3"  
+	echo "	    \    \->SUBTEST->FILEC	 \->NOTMUSIC"
+	echo "	     \    \->FILEA.txt"
+	echo "	      \    \->FILEB.txt"
+	echo "	       \                    "
+	echo "	        \------------->TEST2.txt"
+	echo "	         \------------->TEST3.txt"
+	echo "##############################################"
+}
+
+initial_state(){
+	"$path" "$r" "$u" "$fpath" 		#make sure that the file structure is as above
+	"$path" "$r" "$u" "$fpath2"		#just in case, I usually have one of those two names
+							#path may diffenet on other device, it is a drawback
+	echo "Initial configuration restored"
+	echo "-------------------------------------------------"
+}
+
+lowercase_r(){
+	"$path" "$r" "$l" "$fpath2" 		#path2 will be set by initial_state	
+	echo "Renamed recursively to lowercase"
+}
+
+helpp(){ 					#help was underlined so it may be some keyword
+	"$path" "$h"				#only -h flag needed
+}
+
+lowercase(){
+	"$path" "$l" "$fpath2" 			
+	echo "Renamed non-recursively to lowercase"
+}
+
+nonsense(){
+	"$path" "some_not_random_nonsense" 
+}
+
+wrongpath(){
+	"$path" "$r" "$l" "wrongpath"				#normally we should add path at the end
+}
+
+twofiles(){
+	"$path" "$l" "$fpath2/TEST2.txt" "$fpath2/TEST3.txt" 	#more than one file as argument
+}
+
+bad_sed(){
+	"$path" "'notAsed'" "$fpath2/TEST2.txt"			
+}
+
+sed_lower(){
+	"$path" 's/.*/\L&/' "$fpath2/TEST2.txt"		#sed pattern for lowercase change is 's/.*/\L&/'
+}
+
+sed_lower_recursive(){
+	"$path" "$r" 's/.*/\L&/' "$fpath2"		
+}
+
+current_file_state(){
+	echo "Current state"
+	tree /home/pabilito/Lab1			#displays nice tree
+	echo "Before executing any command (including exit) file names are moved back to inital (uppercase) state, folders are not affected"
+}
+
+#MAIN --------------------------------------------------
+
+file_structure
+
+while true; do
+	echo "-------------------------------------------------"
+	echo "MENU - before executing any command (including exit) file names are moved back to inital state"
+	echo "Please choose 1 to exit"
+	echo "Please choose 2 to display initial file structure"
+	echo "Please choose 3 to rename recursively all files to uppercase (= return to initial state)"
+	echo "Please choose 4 to rename recursively all files to lowercase"
+	echo "Please choose 5 to ask for help"
+	echo "Please choose 6 to non-recursively rename folder EOPSY to lowercase"
+	echo "Please choose 7 to input 'modify some_not_random_nonsense'"
+	echo "Please choose 8 to rename recursively to lowercase, but with wrong path to file"
+	echo "Please choose 9 to rename 2 files (TEST2.txt & TEST3.txt) at once non-recursively to lowercase"
+	echo "Please choose 10 to write some sed pattern that doesn't make sense"
+	echo "Please choose 11 to rename file TEST2.txt to lowercase with sed"
+	echo "Please choose 12 to rename whole EOPSY folder to lowercase with sed recursively"
+	echo "-------------------------------------------------"
+
+	current_file_state
+
+	read option_num
+	initial_state					#return to initial state
+	clear						#i use too much echo and it becomes difficult to read
+	case $option_num in
+	1)
+		echo "Program terminated"
+		exit
+	;;
+	2)
+		file_structure
+	;;
+	3)
+		continue 				#we would call initial state here, so we dont need to do anything
+	;;
+	4)
+		lowercase_r
+	;;
+	5)
+		helpp
+	;;
+	6)
+		lowercase
+	;;
+	7)
+		nonsense
+	;;
+	8)
+		wrongpath
+	;;
+	9)
+		twofiles
+	;;
+	10)
+		bad_sed
+	;;
+	11)
+		sed_lower
+	;;
+	12)
+		sed_lower_recursive
+	;;
+	*) #if everything fails
+	echo "No matching option found. Please choose valid number and only number"
+	;;
+	esac
+
+done
+

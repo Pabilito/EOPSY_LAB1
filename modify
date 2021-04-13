@@ -1,0 +1,203 @@
+#!/bin/bash 
+#my vm ubuntu 16 has bash (I used 'which bash')
+
+#TO AVOID USING ./ (./modify) to call script
+#before first execution please make an alias (copy to the console)
+#alias modify='path_to_where_this_file_is_saved'
+#alias modify='/home/pabilito/Lab1/modify' in my case
+#chmod u+x modify if permision denied
+
+#path for tests = "/home/pabilito/Lab1/eopsy/somefilename.sth"
+
+#MORE COMMENTS
+
+error_message(){	#general error message
+	echo "Incorrect parameters. To call technical support use 'modify -h'"
+	exit 
+}
+
+error_message_file(){	#when wrong filename
+	echo "$1" "cannot be accessed. Incorrect file/directory. To call technical support use 'modify -h'"
+	exit 
+}
+
+help_message(){ 	#when -h detected
+	echo "Welcome to windows technical support. How may I help you, Sir?"
+	echo "Available options:"
+	echo "modify [-r] [-l|-u] <dir/file names...>"
+	echo "modify [-r] <sed pattern> <dir/file names...>"
+	echo "modify [-h]"
+	echo "-h help"
+	echo "-l lowercase"
+	echo "-l uppercase"
+	echo "-r recursive (optional)"
+	echo "<dir/file names...> please provide full path to files in form /home/directory/file.extension"
+	echo "<sed pattern> please provide sed pattern in form 'pattern'. Write sed -h for more info"
+}
+
+#changes to lowercase or uppercase
+to_lowercase_uppercase(){ # $1-file path; $2-lower/upper (lower = change to lowercase)
+	check_if_file_exists "$1"
+	tmp="$1"
+	while [[ $tmp == *"/"* ]]; do		# check if string contains "/"
+		tmp=${tmp#*/}   		# remove prefix ending in "/" - I don't want to change upper folders
+	done
+	tmp=${tmp%.*}   			# remove suffix starting with "." - I don't want to change suffix
+	
+	if test "$2" = "lower"; then
+		changed="$( tr '[:upper:]' '[:lower:]' <<<"$tmp" )" #tr changes all uppercase letters to lowercase ones
+	else
+		changed="$( tr '[:lower:]' '[:upper:]' <<<"$tmp" )" #tr changes all lowercase letters to uppercase ones
+	fi
+
+	if [ "$changed" = "$tmp" ]; then	# if new file name would be the same as old just return
+		echo "Cannot change to the same name, file/folder skipped."
+		return
+	fi
+
+	tmp2="$1"
+	newname=${tmp2%$tmp*}			#copy initial part of path (until filename)
+	newname=$newname$changed		#merge 2 strings together
+
+	tmp2="$1"
+	tmp2=${tmp2#*/$tmp}			#remove prefix ending in filename
+	newname=$newname$tmp2			#append extension
+			
+	mv "$1" $newname 	 		#change name
+	echo "Filename changed to: " "$newname"
+}
+
+check_if_file_exists(){ #$1 path to file
+	FILE="$1"
+	if [ -f "$FILE" ] || [ -d "$FILE" ]  	#check if given file or directory can be accessed
+		then 
+    		return
+	else
+		error_message_file "$1"
+	fi
+}
+
+recurence(){	#handles -r flag; $1 - lower/upper, $2 - path to file
+	check_if_file_exists "$2"
+		
+	if [[ -d $2 ]]; then				#check if folder
+		subdirectories=($(ls "$2"))		#list all subdirectories
+		for arg in "${subdirectories[@]}"; do
+			path="$2""/""$arg"		#path to subdirectory		
+			recurence "$1" "$path"	 	#recursive solution
+		done
+		return					#do not rename folders in recurence mode
+	fi
+	
+	to_lowercase_uppercase "$2" "$1" 		#at the end change current folder/file
+}
+
+#sed exemplary pattern
+#echo "/home/pabilito/Lab1/EOPSY/test2.txt" | sed 's/.*\///' - prints only filename 
+# 's/.*/\L&/' - lowercase
+# 's/.*/\U&/' - uppercase
+
+#process sed pattern
+sed_pattern(){	#1-patern, 2-path
+	check_if_file_exists "$2"
+	tmp="$2"
+	tmp=${tmp%.*}   				# remove suffix starting with "." - I don't want to change suffix		
+	if echo ${2} | sed ${1} ;then				#check if given path and sed pattern can be processed
+		filename=$(echo ${tmp} | sed 's/.*\///')	#extract filename	
+		processed=$(echo ${filename} | sed ${1})	#change it with sed
+
+		if [ "$processed" = "$filename" ]; then		# if new file name would be the same as old just return
+			echo "Cannot change to the same name, file/folder skipped."
+			return
+		fi
+
+		tmp2="$2"
+		newname=${tmp2%$filename*}			#copy initial part of path until filename
+		newname=$newname$processed			#merge strings
+
+		tmp2="$2"
+		tmp2=${tmp2#*$filename}				#remove prefix ending in filename
+		newname=$newname$tmp2				#append extension
+
+		mv "$2" $newname 	 			#change name
+		echo "Filename changed to: " "$newname" "with sed"
+
+	else
+		error_message					#we stop execution after an error
+	fi
+}
+
+#process sed pattern recursively
+sed_pattern_recurence(){ #1 pattern, #2path
+	if [[ -d $2 ]]; then					#check if folder
+		subdirectories=($(ls "$2"))
+		for arg in "${subdirectories[@]}"; do
+			path="$2""/""$arg"			#path to subdirectory		
+			sed_pattern_recurence "$1" "$path"	#recursive solution
+		done
+		return						#do not rename folders in recurence mode
+	fi
+	
+	sed_pattern "$1" "$2" 					#at the end change current folder/file
+
+}
+
+#MAIN CODE -----------------------------------------------------------------------------------------------------
+#[-r][-l | -u] <dir/filenames>
+#[-h] for help
+
+if test -h = "$1"
+	then
+	help_message
+elif test "$#" -lt 2; then					#check if less than 2 arguments
+	error_message
+fi
+
+directories=( "$@" ) 						#iterate through directories in arguments from 1/2 to last one
+unset 'directories[0]'						#remove 1st flag
+
+if test -l = "$1" 						#no recurrence
+	then
+	for arg in "${directories[@]}"; do			#rename directories in a loop
+		to_lowercase_uppercase "$arg" "lower"
+	done	
+elif test -u = "$1" 
+	then
+	for arg in "${directories[@]}"; do			
+		to_lowercase_uppercase "$arg" "upper" 		#same as above, but to uppercase
+	done
+elif test -r = "$1"
+	then
+
+	unset 'directories[1]'					#remove -r flag from directories to iterate through	
+
+	if test -l = "$2"
+		then 
+		rec_type="lower"
+	elif test -u = "$2" 	
+	then 
+		rec_type="upper"
+	else
+		for arg in "${directories[@]}"; do	
+								echo "$arg"			
+			sed_pattern_recurence "$2" "$arg" 			
+		done
+		echo "Program finished successfully"
+		exit
+	fi
+			
+	for arg in "${directories[@]}"; do			
+		recurence "$rec_type" "$arg" 			#we pass rec_type to know if lowercase/uppercase
+	done
+
+
+else
+	for arg in "${directories[@]}"; do		
+		sed_pattern "$1" "$arg"
+	done 	
+fi
+
+
+
+echo "Program finished successfully"
+
